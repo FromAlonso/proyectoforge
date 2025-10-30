@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorkFlow Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container h-100">
+            <div class="row h-100 align-items-center header-content">
+                <div class="col-md-6 d-flex align-items-center">
+                    <img th:src="@{/images/logo.png}" alt="Work Logo" class="logo-small">
+                    <h5 class="mb-0 text-white ms-3">¡Hola!, <span th:text="${user.firstName}">Usuario</span></h5>
+                </div>
+                <div class="col-md-6 text-end">
+                    <div class="dropdown user-dropdown">
+                        <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" 
+                                aria-expanded="false" style="border-radius: 50%; width: 45px; height: 45px;">
+                            <i class="fas fa-user"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editUserModal">
+                                    <i class="fas fa-edit me-2"></i>Cambiar datos de usuario
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" th:href="@{/colors}">
+                                    <i class="fas fa-palette me-2"></i>Switch color
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" th:href="@{/terms}">
+                                    <i class="fas fa-file-contract me-2"></i>Términos y condiciones
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item text-danger" th:href="@{/logout}">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Cerrar sesión
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Menú Hamburguesa -->
+    <nav class="navbar navbar-expand-lg navbar-custom">
+        <div class="container">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+                    style="cursor: pointer;">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" 
+                           style="cursor: pointer;">
+                            <i class="fas fa-bars me-2"></i>Menú de Widgets
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addWidgetModal">
+                                    <i class="fas fa-plus me-2"></i>Agregar widget
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="toggleEditMode()">
+                                    <i class="fas fa-times me-2"></i>Eliminar widget
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="toggleEditMode()">
+                                    <i class="fas fa-edit me-2"></i>Editar widgets
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+                <span class="navbar-text">
+                    <i class="fas fa-calendar-day me-2"></i>
+                    <span id="currentDate"></span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+     <!-- Switch de Categorías -->
+    <div class="container">
+        <div class="category-switch">
+            <button class="category-btn active" id="btnEstudios" onclick="switchCategory('estudios')">
+                <i class="fas fa-graduation-cap me-2"></i>Estudios
+            </button>
+            <button class="category-btn-trabajo" id="btnTrabajo" onclick="switchCategory('trabajo')">
+                <i class="fas fa-briefcase me-2"></i>Trabajo
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <main class="container mb-5">
+        <div class="row" id="widgetsContainer">
+            <!-- Widget de Progreso -->
+            <div class="col-lg-6 mb-4">
+                <div class="widget">
+                    <button class="widget-close" onclick="removeWidget(this)">&times;</button>
+                    <h5 class="d-flex align-items-center">
+                        <i class="fas fa-chart-line me-2 text-primary-custom"></i>
+                        Progreso de Tareas - <span th:text="${category}">Estudios</span>
+                    </h5>
+                    
+                    <div class="progress mb-3">
+                        <div class="progress-bar progress-bar-custom" 
+                             role="progressbar" 
+                             th:attr="style='width: ' + ${progress} + '%;'"
+                             th:aria-valuenow="${progress}"
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            <span th:text="${#numbers.formatDecimal(progress, 1, 1)} + '%'">0%</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Lista de Tareas -->
+                    <div class="task-list">
+                        <div th:each="task : ${tasks}" class="task-item">
+                            <input type="checkbox" class="task-checkbox form-check-input" 
+                                   th:checked="${task.completed}"
+                                   th:onclick="'toggleTask(' + ${task.id} + ')'"
+                                   th:id="'task-' + ${task.id}">
+                            <label th:for="'task-' + ${task.id}" 
+                                   th:class="${task.completed} ? 'task-title task-completed' : 'task-title'"
+                                   th:text="${task.title}">
+                                Tarea ejemplo
+                            </label>
+                            <small class="text-muted ms-2" th:if="${task.description}" th:text="${task.description}"></small>
+                        </div>
+                        <div th:if="${#lists.isEmpty(tasks)}" class="text-center text-muted py-3">
+                            <i class="fas fa-tasks fa-2x mb-2"></i>
+                            <p>No hay tareas en esta categoría</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Botón para agregar tarea -->
+                    <div class="text-center">
+                        <div class="add-task-btn" data-bs-toggle="modal" data-bs-target="#addTaskModal" title="Agregar nueva tarea">
+                            <i class="fas fa-plus"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Widget Pomodoro -->
+            <div class="col-lg-6 mb-4">
+                <div class="widget">
+                    <button class="widget-close" onclick="removeWidget(this)">&times;</button>
+                    <h5 class="d-flex align-items-center">
+                        <i class="fas fa-clock me-2 text-primary-custom"></i>
+                        Pomodoro Timer
+                    </h5>
+                    
+                    <div class="pomodoro-container">
+                        <div class="timer-display mb-4">
+                            <h1 id="pomodoroTimer">25:00</h1>
+                            <div class="text-muted small" id="pomodoroStatus">Listo para comenzar</div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-4">
+                                <label class="form-label small">Estudio (min)</label>
+                                <input type="number" class="form-control form-control-sm" id="studyTime" value="25" min="1" max="60">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small">Descanso (min)</label>
+                                <input type="number" class="form-control form-control-sm" id="breakTime" value="5" min="1" max="30">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small">Ciclos</label>
+                                <input type="number" class="form-control form-control-sm" id="cycles" value="4" min="1" max="10">
+                            </div>
+                        </div>
+                        
+                        <div class="pomodoro-controls">
+                            <button class="btn btn-primary-custom" onclick="startPomodoro()" id="startBtn">
+                                <i class="fas fa-play me-1"></i> Iniciar
+                            </button>
+                            <button class="btn btn-warning" onclick="pausePomodoro()" id="pauseBtn" style="display: none;">
+                                <i class="fas fa-pause me-1"></i> Pausar
+                            </button>
+                            <button class="btn btn-secondary" onclick="resetPomodoro()">
+                                <i class="fas fa-redo me-1"></i> Reiniciar
+                            </button>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <small class="text-muted">Ciclo actual: <span id="currentCycle">1</span>/<span id="totalCycles">4</span></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Widget Música (solo para trabajo) -->
+            
+            <div class="col-lg-6 mb-4" th:if="${category == 'trabajo'}">
+                <div class="widget">
+                    <button class="widget-close" onclick="removeWidget(this)">&times;</button>
+                    <h5 class="d-flex align-items-center">
+                        <i class="fas fa-music me-2 text-primary-custom"></i>
+                        Reproductor de Música
+                    </h5>
+                    
+                    <!-- Información de la canción actual -->
+                    <div class="mb-3" id="currentTrackInfo" style="display: none;">
+                        <div class="fw-bold" id="currentTrackName"></div>
+                        <div class="text-muted small" id="currentTrackStatus">Detenido</div>
+                    </div>
+                    
+                    <!-- Barra de progreso -->
+                    <div class="progress mb-3" style="height: 6px;">
+                        <div class="progress-bar progress-bar-custom" id="musicProgress" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted mb-3">
+                        <span id="currentTime">0:00</span>
+                        <span id="totalTime">0:00</span>
+                    </div>
+                    
+                    <!-- Controles -->
+                    <div class="music-controls">
+                        <button class="btn btn-outline-primary music-btn" onclick="showMusicMenu()" title="Agregar música">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="btn btn-outline-primary music-btn" onclick="previousTrack()" title="Canción anterior">
+                            <i class="fas fa-backward"></i>
+                        </button>
+                        <button class="btn btn-primary-custom music-btn" onclick="togglePlayPause()" id="playPauseBtn" title="Reproducir/Pausar">
+                            <i class="fas fa-play" id="playPauseIcon"></i>
+                        </button>
+                        <button class="btn btn-outline-primary music-btn" onclick="nextTrack()" title="Siguiente canción">
+                            <i class="fas fa-forward"></i>
+                        </button>
+                        <button class="btn btn-outline-primary music-btn" onclick="stopMusic()" title="Detener">
+                            <i class="fas fa-stop"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Menú de música (oculto por defecto) -->
+                    <div class="mt-3" id="musicMenu" style="display: none;">
+                        <h6 class="border-bottom pb-2">Agregar Nueva Canción</h6>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control form-control-sm" id="musicUrl" 
+                                   placeholder="URL del audio (MP3, WAV, etc.)">
+                        </div>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control form-control-sm" id="musicName" 
+                                   placeholder="Nombre de la canción">
+                            <button class="btn btn-primary-custom btn-sm" onclick="addTrack()">
+                                <i class="fas fa-plus"></i> Agregar
+                            </button>
+                        </div>
+                        
+                        <h6 class="border-bottom pb-2 mt-3">Lista de Reproducción</h6>
+                        <div class="track-list" id="trackList">
+                            <div class="text-center text-muted py-2">
+                                <small>No hay canciones en la lista</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Agregar Tarea -->
+    <div class="modal fade" id="addTaskModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Agregar Nueva Tarea</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form th:action="@{/task/add}" method="post">
+                    <div class="modal-body">
+                        <input type="hidden" name="category" th:value="${category}">
+                        <div class="mb-3">
+                            <label class="form-label">Título de la Tarea</label>
+                            <input type="text" class="form-control" name="title" required 
+                                   placeholder="Ej: Estudiar para el examen final">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descripción (Opcional)</label>
+                            <textarea class="form-control" name="description" rows="3" 
+                                      placeholder="Descripción detallada de la tarea..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary-custom">
+                            <i class="fas fa-plus me-1"></i>Agregar Tarea
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Editar Usuario -->
+    <div class="modal fade" id="editUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Información de Usuario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form th:action="@{/profile/update}" method="post">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nombre</label>
+                                <input type="text" class="form-control" name="firstName" 
+                                       th:value="${user.firstName}" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Apellido</label>
+                                <input type="text" class="form-control" name="lastName" 
+                                       th:value="${user.lastName}" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Correo Electrónico</label>
+                            <input type="email" class="form-control" name="email" 
+                                   th:value="${user.email}" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary-custom">
+                            <i class="fas fa-save me-1"></i>Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Agregar Widget -->
+    <div class="modal fade" id="addWidgetModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Agregar Nuevo Widget</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card widget-card" onclick="selectWidget('progress')" style="cursor: pointer;">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-chart-line fa-2x text-primary-custom mb-2"></i>
+                                    <h6>Progreso de Tareas</h6>
+                                    <small class="text-muted">Seguimiento de tareas completadas</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card widget-card" onclick="selectWidget('pomodoro')" style="cursor: pointer;">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-clock fa-2x text-primary-custom mb-2"></i>
+                                    <h6>Pomodoro Timer</h6>
+                                    <small class="text-muted">Técnica de gestión del tiempo</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3" th:if="${category == 'trabajo'}">
+                            <div class="card widget-card" onclick="selectWidget('music')" style="cursor: pointer;">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-music fa-2x text-primary-custom mb-2"></i>
+                                    <h6>Reproductor de Música</h6>
+                                    <small class="text-muted">Reproduce tu música favorita</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Variables globales
+        let editMode = false;
+        let pomodoroInterval;
+        let currentPomodoroTime = 25 * 60;
+        let isPomodoroRunning = false;
+        let isPomodoroPaused = false;
+        let currentCycle = 1;
+        let totalCycles = 4;
+        let isStudyTime = true;
+        
+        // Música
+        let currentAudio = null;
+        let currentTrackIndex = -1;
+        let tracks = JSON.parse(localStorage.getItem('work_music_tracks') || '[]');
+        
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCurrentDate();
+            updatePomodoroDisplay();
+            updateTrackList();
+            updateCategoryButtons();
+            
+            // Cargar tracks guardados
+            if (tracks.length > 0) {
+                document.getElementById('currentTrackInfo').style.display = 'block';
+            }
+        });
+
+        // Funciones de Utilidad
+        function updateCurrentDate() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            document.getElementById('currentDate').textContent = 
+                now.toLocaleDateString('es-ES', options);
+        }
+
+        function updateCategoryButtons() {
+            const category = '[[${category}]]';
+            const btnEstudios = document.getElementById('btnEstudios');
+            const btnTrabajo = document.getElementById('btnTrabajo');
+            
+            if (category === 'estudios') {
+                btnEstudios.classList.add('active');
+                btnTrabajo.classList.remove('active');
+            } else {
+                btnTrabajo.classList.add('active');
+                btnEstudios.classList.remove('active');
+            }
+        }
+
+        // Funciones de Categoría
+        function switchCategory(category) {
+            window.location.href = '/dashboard?category=' + category;
+        }
+
+        // Funciones de Edición
+        function toggleEditMode() {
+            editMode = !editMode;
+            document.body.classList.toggle('edit-mode', editMode);
+            
+            const editBtn = document.querySelector('[onclick="toggleEditMode()"]');
+            if (editMode) {
+                editBtn.innerHTML = '<i class="fas fa-check me-2"></i>Terminar edición';
+            } else {
+                editBtn.innerHTML = '<i class="fas fa-edit me-2"></i>Editar widgets';
+            }
+        }
+
+        function removeWidget(button) {
+            if (confirm('¿Estás seguro de que quieres eliminar este widget?')) {
+                const widget = button.closest('.widget');
+                widget.style.opacity = '0';
+                setTimeout(() => {
+                    widget.style.display = 'none';
+                }, 300);
+            }
+        }
+
+        function selectWidget(type) {
+            alert('Widget ' + type + ' seleccionado. Esta funcionalidad se implementará próximamente.');
+            bootstrap.Modal.getInstance(document.getElementById('addWidgetModal')).hide();
+        }
+
+        // Funciones de Tareas
+        function toggleTask(taskId) {
+            const category = '[[${category}]]';
+            fetch('/task/toggle/' + taskId + '?category=' + category, { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                }
+            }).then(() => {
+                // Recargar la página para actualizar el progreso
+                setTimeout(() => location.reload(), 300);
+            });
+        }
+
+        // Pomodoro Timer
+        function startPomodoro() {
+            if (isPomodoroRunning) return;
+            
+            const studyTime = parseInt(document.getElementById('studyTime').value) * 60;
+            currentPomodoroTime = studyTime;
+            isPomodoroRunning = true;
+            isPomodoroPaused = false;
+            totalCycles = parseInt(document.getElementById('cycles').value);
+            currentCycle = 1;
+            isStudyTime = true;
+            
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('pauseBtn').style.display = 'inline-block';
+            document.getElementById('pomodoroStatus').textContent = 'Estudiando...';
+            
+            pomodoroInterval = setInterval(updatePomodoro, 1000);
+        }
+
+        function pausePomodoro() {
+            if (!isPomodoroRunning) return;
+            
+            isPomodoroPaused = !isPomodoroPaused;
+            if (isPomodoroPaused) {
+                clearInterval(pomodoroInterval);
+                document.getElementById('pauseBtn').innerHTML = '<i class="fas fa-play me-1"></i> Reanudar';
+                document.getElementById('pomodoroStatus').textContent = 'Pausado';
+            } else {
+                pomodoroInterval = setInterval(updatePomodoro, 1000);
+                document.getElementById('pauseBtn').innerHTML = '<i class="fas fa-pause me-1"></i> Pausar';
+                document.getElementById('pomodoroStatus').textContent = isStudyTime ? 'Estudiando...' : 'Descansando...';
+            }
+        }
+
+        function resetPomodoro() {
+            clearInterval(pomodoroInterval);
+            isPomodoroRunning = false;
+            isPomodoroPaused = false;
+            const studyTime = parseInt(document.getElementById('studyTime').value) * 60;
+            currentPomodoroTime = studyTime;
+            currentCycle = 1;
+            isStudyTime = true;
+            
+            document.getElementById('startBtn').style.display = 'inline-block';
+            document.getElementById('pauseBtn').style.display = 'none';
+            document.getElementById('pomodoroStatus').textContent = 'Listo para comenzar';
+            document.getElementById('currentCycle').textContent = '1';
+            document.getElementById('totalCycles').textContent = totalCycles;
+            
+            updatePomodoroDisplay();
+        }
+
+        function updatePomodoro() {
+            currentPomodoroTime--;
+            updatePomodoroDisplay();
+            
+            if (currentPomodoroTime <= 0) {
+                clearInterval(pomodoroInterval);
+                
+                if (isStudyTime) {
+                    // Terminó el tiempo de estudio, empezar descanso
+                    const breakTime = parseInt(document.getElementById('breakTime').value) * 60;
+                    currentPomodoroTime = breakTime;
+                    isStudyTime = false;
+                    document.getElementById('pomodoroStatus').textContent = '¡Descanso!';
+                    alert('¡Tiempo de estudio completado! Tómate un descanso.');
+                } else {
+                    // Terminó el descanso
+                    currentCycle++;
+                    if (currentCycle > totalCycles) {
+                        document.getElementById('pomodoroStatus').textContent = '¡Todos los ciclos completados!';
+                        alert('¡Felicidades! Has completado todos los ciclos Pomodoro.');
+                        resetPomodoro();
+                        return;
+                    }
+                    
+                    const studyTime = parseInt(document.getElementById('studyTime').value) * 60;
+                    currentPomodoroTime = studyTime;
+                    isStudyTime = true;
+                    document.getElementById('pomodoroStatus').textContent = 'Estudiando...';
+                    document.getElementById('currentCycle').textContent = currentCycle;
+                    alert('¡Descanso terminado! Comienza el ciclo ' + currentCycle);
+                }
+                
+                pomodoroInterval = setInterval(updatePomodoro, 1000);
+            }
+        }
+
+        function updatePomodoroDisplay() {
+            const minutes = Math.floor(currentPomodoroTime / 60);
+            const seconds = currentPomodoroTime % 60;
+            document.getElementById('pomodoroTimer').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Funciones de Música
+        function showMusicMenu() {
+            const menu = document.getElementById('musicMenu');
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function addTrack() {
+            const url = document.getElementById('musicUrl').value.trim();
+            const name = document.getElementById('musicName').value.trim() || 'Canción sin nombre';
+            
+            if (url) {
+                tracks.push({ url, name });
+                saveTracks();
+                updateTrackList();
+                document.getElementById('musicUrl').value = '';
+                document.getElementById('musicName').value = '';
+                
+                if (currentTrackIndex === -1) {
+                    currentTrackIndex = 0;
+                    document.getElementById('currentTrackInfo').style.display = 'block';
+                }
+            } else {
+                alert('Por favor, ingresa una URL válida');
+            }
+        }
+
+        function updateTrackList() {
+            const trackList = document.getElementById('trackList');
+            trackList.innerHTML = '';
+            
+            if (tracks.length === 0) {
+                trackList.innerHTML = '<div class="text-center text-muted py-2"><small>No hay canciones en la lista</small></div>';
+                return;
+            }
+            
+            tracks.forEach((track, index) => {
+                const trackElement = document.createElement('div');
+                trackElement.className = `track-item ${index === currentTrackIndex ? 'bg-light' : ''}`;
+                trackElement.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-bold small">${track.name}</div>
+                            <div class="text-muted extra-small">${track.url.substring(0, 30)}...</div>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="playTrack(${index})" title="Reproducir">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="removeTrack(${index})" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                trackList.appendChild(trackElement);
+            });
+        }
+
+        function removeTrack(index) {
+            if (confirm('¿Estás seguro de que quieres eliminar esta canción?')) {
+                tracks.splice(index, 1);
+                saveTracks();
+                updateTrackList();
+                
+                if (currentTrackIndex === index) {
+                    if (tracks.length > 0) {
+                        currentTrackIndex = 0;
+                        playTrack(0);
+                    } else {
+                        currentTrackIndex = -1;
+                        stopMusic();
+                        document.getElementById('currentTrackInfo').style.display = 'none';
+                    }
+                }
+            }
+        }
+
+        function playTrack(index) {
+            if (index < 0 || index >= tracks.length) return;
+            
+            currentTrackIndex = index;
+            const track = tracks[index];
+            
+            if (currentAudio) {
+                currentAudio.pause();
+            }
+            
+            currentAudio = new Audio(track.url);
+            currentAudio.play().catch(error => {
+                console.error('Error al reproducir audio:', error);
+                alert('Error al reproducir el audio. Verifica que la URL sea válida.');
+                return;
+            });
+            
+            document.getElementById('playPauseIcon').className = 'fas fa-pause';
+            document.getElementById('currentTrackName').textContent = track.name;
+            document.getElementById('currentTrackStatus').textContent = 'Reproduciendo';
+            document.getElementById('playPauseBtn').classList.add('btn-primary-custom');
+            document.getElementById('playPauseBtn').classList.remove('btn-outline-primary');
+            
+            updateTrackList();
+            
+            // Actualizar barra de progreso
+            currentAudio.addEventListener('timeupdate', updateMusicProgress);
+            currentAudio.addEventListener('ended', nextTrack);
+        }
+
+        function togglePlayPause() {
+            if (!currentAudio) {
+                if (tracks.length > 0) {
+                    playTrack(currentTrackIndex >= 0 ? currentTrackIndex : 0);
+                }
+                return;
+            }
+            
+            if (currentAudio.paused) {
+                currentAudio.play();
+                document.getElementById('playPauseIcon').className = 'fas fa-pause';
+                document.getElementById('currentTrackStatus').textContent = 'Reproduciendo';
+            } else {
+                currentAudio.pause();
+                document.getElementById('playPauseIcon').className = 'fas fa-play';
+                document.getElementById('currentTrackStatus').textContent = 'Pausado';
+            }
+        }
+
+        function stopMusic() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                document.getElementById('playPauseIcon').className = 'fas fa-play';
+                document.getElementById('currentTrackStatus').textContent = 'Detenido';
+                document.getElementById('musicProgress').style.width = '0%';
+                document.getElementById('currentTime').textContent = '0:00';
+            }
+        }
+
+        function previousTrack() {
+            if (tracks.length === 0) return;
+            currentTrackIndex = (currentTrackIndex - 1 + tracks.length) % tracks.length;
+            playTrack(currentTrackIndex);
+        }
+
+        function nextTrack() {
+            if (tracks.length === 0) return;
+            currentTrackIndex = (currentTrackIndex + 1) % tracks.length;
+            playTrack(currentTrackIndex);
+        }
+
+        function updateMusicProgress() {
+            if (!currentAudio) return;
+            
+            const progress = (currentAudio.currentTime / currentAudio.duration) * 100;
+            document.getElementById('musicProgress').style.width = progress + '%';
+            
+            // Actualizar tiempos
+            document.getElementById('currentTime').textContent = formatTime(currentAudio.currentTime);
+            document.getElementById('totalTime').textContent = formatTime(currentAudio.duration);
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function saveTracks() {
+            localStorage.setItem('work_music_tracks', JSON.stringify(tracks));
+        }
+
+        // Estilos adicionales para las tarjetas de widgets
+        const style = document.createElement('style');
+        style.textContent = `
+            .widget-card {
+                transition: all 0.3s ease;
+                border: 2px solid transparent;
+            }
+            .widget-card:hover {
+                border-color: var(--primary-color);
+                transform: translateY(-2px);
+            }
+            .extra-small {
+                font-size: 0.7rem;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
