@@ -408,11 +408,49 @@
         let totalCycles = 4;
         let isStudyTime = true;
         
-        // Música
+
+
+        // Música*
+// URLs alternativas 100% funcionales
+        const predefinedTracks = [
+            {
+                name: "Ruido Blanco",
+                url: "https://fromalonso.github.io/rb/Ruidob.mp3", 
+                category: "Ruido Blanco"
+            },
+            {
+                name: "Ruido Café",
+                url: "https://fromalonso.github.io/rm/Ruidom.mp3",
+                category: "Ruido Café"
+            },
+            {
+                name: "Ruido Rosa",
+                url: "https://fromalonso.github.io/rr/Ruidor.mp3",
+                category: "Ruido Rosa"
+           },
+        ];
+
+      
+
+    
+
+        // Música del usuario
         let currentAudio = null;
         let currentTrackIndex = -1;
-        let tracks = JSON.parse(localStorage.getItem('work_music_tracks') || '[]');
-        
+        let userTracks = JSON.parse(localStorage.getItem('work_music_tracks') || '[]');
+        let allTracks = [...predefinedTracks, ...userTracks];
+
+        // Combinar música predefinida con tracks del usuario
+        function updateAllTracks() {
+            allTracks = [...predefinedTracks, ...userTracks];
+            updateTrackList();
+        }
+
+        function saveUserTracks() {
+            localStorage.setItem('work_music_tracks', JSON.stringify(userTracks));
+            updateAllTracks();
+        }
+                        
         // Inicialización
         document.addEventListener('DOMContentLoaded', function() {
             updateCurrentDate();
@@ -421,7 +459,7 @@
             updateCategoryButtons();
             
             // Cargar tracks guardados
-            if (tracks.length > 0) {
+            if (allTracks.length > 0) {
                 document.getElementById('currentTrackInfo').style.display = 'block';
             }
         });
@@ -606,13 +644,12 @@
             const name = document.getElementById('musicName').value.trim() || 'Canción sin nombre';
             
             if (url) {
-                tracks.push({ url, name });
-                saveTracks();
-                updateTrackList();
+                userTracks.push({ url, name });
+                saveUserTracks();
                 document.getElementById('musicUrl').value = '';
                 document.getElementById('musicName').value = '';
                 
-                if (currentTrackIndex === -1) {
+                if (currentTrackIndex === -1 && allTracks.length > 0) {
                     currentTrackIndex = 0;
                     document.getElementById('currentTrackInfo').style.display = 'block';
                 }
@@ -625,86 +662,138 @@
             const trackList = document.getElementById('trackList');
             trackList.innerHTML = '';
             
-            if (tracks.length === 0) {
+            if (allTracks.length === 0) {
                 trackList.innerHTML = '<div class="text-center text-muted py-2"><small>No hay canciones en la lista</small></div>';
                 return;
             }
             
-            tracks.forEach((track, index) => {
+            // Mostrar música predefinida primero
+            const predefinedSection = document.createElement('div');
+            predefinedSection.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0 text-primary-custom">🎵 Música Predefinida</h6>
+                    <span class="badge bg-primary">${predefinedTracks.length} canciones</span>
+                </div>
+            `;
+            trackList.appendChild(predefinedSection);
+            
+            // Lista de música predefinida
+            predefinedTracks.forEach((track, index) => {
                 const trackElement = document.createElement('div');
                 trackElement.className = `track-item ${index === currentTrackIndex ? 'bg-light' : ''}`;
                 trackElement.innerHTML = `
                     <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="fw-bold small">${track.name}</div>
-                            <div class="text-muted extra-small">${track.url.substring(0, 30)}...</div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold small">${track.name} <span class="badge bg-primary btn-sm ms-2">Predefinida</span></div>
+                            <div class="text-muted extra-small">Categoría: ${track.category}</div>
                         </div>
                         <div>
                             <button class="btn btn-sm btn-outline-primary me-1" onclick="playTrack(${index})" title="Reproducir">
                                 <i class="fas fa-play"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="removeTrack(${index})" title="Eliminar">
-                                <i class="fas fa-trash"></i>
                             </button>
                         </div>
                     </div>
                 `;
                 trackList.appendChild(trackElement);
             });
+            
+            // Mostrar música del usuario (si existe)
+            if (userTracks.length > 0) {
+                const userSection = document.createElement('div');
+                userSection.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center mb-2 mt-4">
+                        <h6 class="mb-0 text-success">🎧 Tu Música</h6>
+                        <span class="badge bg-success">${userTracks.length} canciones</span>
+                    </div>
+                `;
+                trackList.appendChild(userSection);
+                
+                userTracks.forEach((track, index) => {
+                    const userIndex = index + predefinedTracks.length;
+                    const trackElement = document.createElement('div');
+                    trackElement.className = `track-item ${userIndex === currentTrackIndex ? 'bg-light' : ''}`;
+                    trackElement.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <div class="fw-bold small">${track.name}</div>
+                                <div class="text-muted extra-small">${track.url.substring(0, 30)}...</div>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="playTrack(${userIndex})" title="Reproducir">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="removeTrack(${userIndex})" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    trackList.appendChild(trackElement);
+                });
+            }
         }
 
         function removeTrack(index) {
-            if (confirm('¿Estás seguro de que quieres eliminar esta canción?')) {
-                tracks.splice(index, 1);
-                saveTracks();
-                updateTrackList();
-                
-                if (currentTrackIndex === index) {
-                    if (tracks.length > 0) {
-                        currentTrackIndex = 0;
-                        playTrack(0);
-                    } else {
-                        currentTrackIndex = -1;
-                        stopMusic();
-                        document.getElementById('currentTrackInfo').style.display = 'none';
+            if (index >= predefinedTracks.length) {
+                // Es un track del usuario
+                const userIndex = index - predefinedTracks.length;
+                if (confirm('¿Estás seguro de que quieres eliminar esta canción?')) {
+                    userTracks.splice(userIndex, 1);
+                    saveUserTracks();
+                    
+                    if (currentTrackIndex === index) {
+                        if (allTracks.length > 0) {
+                            currentTrackIndex = 0;
+                            playTrack(0);
+                        } else {
+                            currentTrackIndex = -1;
+                            stopMusic();
+                            document.getElementById('currentTrackInfo').style.display = 'none';
+                        }
                     }
                 }
+            } else {
+                alert('Esta es una canción predefinida y no se puede eliminar.');
             }
         }
 
         function playTrack(index) {
-            if (index < 0 || index >= tracks.length) return;
+            if (index < 0 || index >= allTracks.length) return;
             
             currentTrackIndex = index;
-            const track = tracks[index];
+            const track = allTracks[index];
             
             if (currentAudio) {
                 currentAudio.pause();
             }
             
+            console.log("🎵 Reproduciendo:", track.name);
+            
             currentAudio = new Audio(track.url);
-            currentAudio.play().catch(error => {
-                console.error('Error al reproducir audio:', error);
-                alert('Error al reproducir el audio. Verifica que la URL sea válida.');
-                return;
+            currentAudio.crossOrigin = "anonymous";
+            
+            currentAudio.play().then(() => {
+                console.log("✅ Audio reproducido exitosamente:", track.name);
+                document.getElementById('playPauseIcon').className = 'fas fa-pause';
+                document.getElementById('currentTrackName').textContent = track.name;
+                document.getElementById('currentTrackStatus').textContent = 'Reproduciendo';
+                document.getElementById('playPauseBtn').classList.add('btn-primary-custom');
+                document.getElementById('playPauseBtn').classList.remove('btn-outline-primary');
+                
+                updateTrackList();
+                
+                currentAudio.addEventListener('timeupdate', updateMusicProgress);
+                currentAudio.addEventListener('ended', nextTrack);
+                
+            }).catch(error => {
+                console.error("❌ Error reproduciendo:", track.name, error);
+                alert('Error al reproducir: ' + track.name);
             });
-            
-            document.getElementById('playPauseIcon').className = 'fas fa-pause';
-            document.getElementById('currentTrackName').textContent = track.name;
-            document.getElementById('currentTrackStatus').textContent = 'Reproduciendo';
-            document.getElementById('playPauseBtn').classList.add('btn-primary-custom');
-            document.getElementById('playPauseBtn').classList.remove('btn-outline-primary');
-            
-            updateTrackList();
-            
-            // Actualizar barra de progreso
-            currentAudio.addEventListener('timeupdate', updateMusicProgress);
-            currentAudio.addEventListener('ended', nextTrack);
         }
 
         function togglePlayPause() {
             if (!currentAudio) {
-                if (tracks.length > 0) {
+                if (allTracks.length > 0) {
                     playTrack(currentTrackIndex >= 0 ? currentTrackIndex : 0);
                 }
                 return;
@@ -733,14 +822,14 @@
         }
 
         function previousTrack() {
-            if (tracks.length === 0) return;
-            currentTrackIndex = (currentTrackIndex - 1 + tracks.length) % tracks.length;
+            if (allTracks.length === 0) return;
+            currentTrackIndex = (currentTrackIndex - 1 + allTracks.length) % allTracks.length;
             playTrack(currentTrackIndex);
         }
 
         function nextTrack() {
-            if (tracks.length === 0) return;
-            currentTrackIndex = (currentTrackIndex + 1) % tracks.length;
+            if (allTracks.length === 0) return;
+            currentTrackIndex = (currentTrackIndex + 1) % allTracks.length;
             playTrack(currentTrackIndex);
         }
 
@@ -762,9 +851,6 @@
             return `${mins}:${secs.toString().padStart(2, '0')}`;
         }
 
-        function saveTracks() {
-            localStorage.setItem('work_music_tracks', JSON.stringify(tracks));
-        }
 
         // Estilos adicionales para las tarjetas de widgets
         const style = document.createElement('style');
